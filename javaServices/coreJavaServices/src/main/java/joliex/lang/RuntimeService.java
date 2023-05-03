@@ -26,6 +26,8 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -261,6 +263,25 @@ public class RuntimeService extends JavaService {
 			retVal.setValue( env );
 		}
 		return retVal;
+	}
+
+	@SuppressWarnings( { "unchecked" } )
+	public static void updateEnv( String name, String val ) throws ReflectiveOperationException {
+		Map< String, String > env = System.getenv();
+		Field field = env.getClass().getDeclaredField( "m" );
+		field.setAccessible( true );
+		((Map< String, String >) field.get( env )).put( name, val );
+	}
+
+	@RequestResponse
+	public void setenv( Value request ) throws FaultException {
+		String key = request.getChildren( "key" ).first().strValue();
+		String value = request.getChildren( "value" ).first().strValue();
+		try {
+			RuntimeService.updateEnv( key, value );
+		} catch( ReflectiveOperationException e ) {
+			throw new FaultException( "RuntimeException", e );
+		}
 	}
 
 	@RequestResponse

@@ -117,6 +117,11 @@ type Stats:void {
 
 type MaybeString:void | string
 
+type SetEnvRequest:void {
+	key: string
+	value: string
+}
+
 interface RuntimeInterface {
 RequestResponse:
 	/// Get the local in-memory location of this service.
@@ -191,6 +196,9 @@ RequestResponse:
 
 	/// Returns the value of an environment variable.
 	getenv(string)(MaybeString),
+
+	/// Set a key-value pair to an environment variable.
+	setenv(SetEnvRequest)(void),
 
 	/// Returns the version of the Jolie interpreter running this service.
 	getVersion(void)(string)
