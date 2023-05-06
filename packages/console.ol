@@ -63,6 +63,9 @@ RequestResponse:
 	*/
 	readLine( ReadLineRequest )( string ),
 
+	///Reads a line using a BufferedReader
+	myReadLine( string )( string ),
+
 	/**!
 	*  it enables the console for input listening
 	*  parameter enableSessionListener enables console input listening for more than one service session (default=false)
