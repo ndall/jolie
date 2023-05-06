@@ -41,7 +41,6 @@ public class ConsoleService extends JavaService {
 	private boolean enableTimestamp = false;
 	private static final String TIMESTAMP_DEFAULT_FORMAT = "dd/MM/yyyy HH:mm:ss";
 	private String timestampFormat = TIMESTAMP_DEFAULT_FORMAT;
-	private final HashMap< String, BufferedReader > inMap = new HashMap<>();
 
 	private class ConsoleInputThread extends Thread {
 		private boolean keepRun = true;
@@ -181,23 +180,5 @@ public class ConsoleService extends JavaService {
 		} else {
 			return System.console().readLine();
 		}
-	}
-
-	@RequestResponse
-	public String myReadLine( String name ) {
-
-		String line = null;
-		try {
-			if( !inMap.containsKey( name ) ) {
-				inMap.put( name, new BufferedReader( new InputStreamReader( System.in, "UTF-8" ) ) );
-			}
-			line = inMap.get( name ).readLine();
-		} catch( Exception e ) {
-			e.printStackTrace();
-		}
-		if( line == null )
-			line = "BUFFERED READER EOF ENCOUNTERED";
-
-		return line;
 	}
 }
