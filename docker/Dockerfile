@@ -28,6 +28,12 @@ RUN cp -avr /jolie-git/dist/jolie/ /usr/lib/jolie/
 RUN cp -a /jolie-git/dist/launchers/unix/.  /usr/bin/
 ENV JOLIE_HOME /usr/lib/jolie
 
+# RUN ls /usr/bin/ | grep jolie
+# RUN cat /usr/bin/jolie
+# RUN /usr/bin/jolie --version
+# RUN dos2unix /usr/bin/jolie
+# RUN jolie --version
+
 # Compile the Jolie installer
 WORKDIR /jolie-git/release-tools/installer
 RUN mvn -T 1C -Dmaven.test.skip -DskipTests clean install
@@ -44,4 +50,5 @@ COPY --from=JolieBuild /jolie-git/release-tools/release/jolie-installer.jar .
 RUN apt-get update && apt-get install -y unzip \
     && java -jar jolie-installer.jar -jh /usr/lib/jolie -jl /usr/bin \
     && rm jolie-installer.jar && rm -rf /tmp/*
+
 ENV JOLIE_HOME /usr/lib/jolie
