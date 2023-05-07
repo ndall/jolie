@@ -46,6 +46,8 @@ type InRequest:string {
 	token?: string
 }
 
+type readLineResponse: string | void
+
 interface ConsoleIface {
 RequestResponse:
 	print( undefined )( void ), 
@@ -62,6 +64,9 @@ RequestResponse:
 	* Read a line from the console using a synchronous call
 	*/
 	readLine( ReadLineRequest )( string ),
+
+	///Reads a line using a BufferedReader
+	myReadLine( string )( readLineResponse ),
 
 	/**!
 	*  it enables the console for input listening
