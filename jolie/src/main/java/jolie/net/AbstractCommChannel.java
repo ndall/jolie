@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
 import jolie.ExecutionThread;
 import jolie.Interpreter;
 import jolie.lang.Constants;
@@ -36,8 +37,6 @@ import jolie.runtime.FaultException;
 import jolie.runtime.Value;
 
 public abstract class AbstractCommChannel extends CommChannel {
-	private static final long RECEIVER_KEEP_ALIVE = 10 * 1000; // 10 seconds
-
 	private final Map< Long, CommMessage > pendingResponses = new HashMap<>();
 	private final List< CommMessage > pendingGenericResponses = new LinkedList<>();
 	private final Map< Long, CompletableFuture< CommMessage > > waiters = new HashMap<>();
@@ -108,11 +107,15 @@ public abstract class AbstractCommChannel extends CommChannel {
 			if( timeoutHandler != null ) {
 				timeoutHandler.cancel( false ); // TODO: What if this fails?
 			}
-			timeoutHandler = ethread.interpreter().schedule( this::timeout, RECEIVER_KEEP_ALIVE );
+			timeoutHandler = ethread.interpreter().schedule( this::timeout, ethread.interpreter().responseTimeout() );
 		}
 
 		private void timeout() {
 			synchronized( parent.responseRecvMutex ) {
+				parent.waiters.forEach( ( requestId, messageFuture ) -> {
+					messageFuture.completeExceptionally( new TimeoutException( "Channel timed out" ) );
+				} );
+				parent.waiters.clear();
 				try {
 					parent.close();
 				} catch( IOException e ) {
@@ -149,17 +152,15 @@ public abstract class AbstractCommChannel extends CommChannel {
 		}
 
 		private void throwIOExceptionFault( IOException e ) {
-			if( parent.waiters.isEmpty() == false ) {
-				for( var entry : parent.waiters.entrySet() ) {
-					entry.getValue().complete( new CommMessage(
-						entry.getKey(),
-						"",
-						Constants.ROOT_RESOURCE_PATH,
-						Value.create(),
-						new FaultException( "IOException", e ) ) );
-				}
-				parent.waiters.clear();
+			for( var entry : parent.waiters.entrySet() ) {
+				entry.getValue().complete( new CommMessage(
+					entry.getKey(),
+					"",
+					Constants.ROOT_RESOURCE_PATH,
+					Value.create(),
+					new FaultException( "IOException", e ) ) );
 			}
+			parent.waiters.clear();
 		}
 
 		@Override
@@ -188,8 +189,9 @@ public abstract class AbstractCommChannel extends CommChannel {
 					}
 					synchronized( parent.responseRecvMutex ) {
 						if( parent.waiters.isEmpty() ) {
-							parent.responseReceiver = null;
 							keepRun = false;
+							parent.responseReceiver = null;
+							timeoutHandler.cancel( false );
 						}
 					}
 				} catch( IOException e ) {
@@ -197,6 +199,7 @@ public abstract class AbstractCommChannel extends CommChannel {
 						throwIOExceptionFault( e );
 						keepRun = false;
 						parent.responseReceiver = null;
+						timeoutHandler.cancel( false );
 					}
 					// TODO: close the channel?
 				}
