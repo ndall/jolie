@@ -26,7 +26,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
-import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
@@ -51,6 +51,8 @@ import jolie.runtime.embedding.EmbeddedServiceLoadingException;
 import jolie.runtime.embedding.RequestResponse;
 
 public class RuntimeService extends JavaService {
+	private final Map< String, String > envMap = new HashMap<>();
+
 	public Value getLocalLocation() {
 		Value v = Value.create();
 		v.setValue( interpreter().commCore().getLocalCommChannel() );
@@ -259,29 +261,22 @@ public class RuntimeService extends JavaService {
 	public Value getenv( String name ) {
 		final Value retVal = Value.create();
 		final String env = System.getenv( name );
-		if( env != null ) {
+
+		if( envMap.containsKey( name ) ) {
+			retVal.setValue( envMap.get( name ) );
+		} else if( env != null ) {
 			retVal.setValue( env );
 		}
-		return retVal;
-	}
 
-	@SuppressWarnings( { "unchecked" } )
-	public static void updateEnv( String name, String val ) throws ReflectiveOperationException {
-		Map< String, String > env = System.getenv();
-		Field field = env.getClass().getDeclaredField( "m" );
-		field.setAccessible( true );
-		((Map< String, String >) field.get( env )).put( name, val );
+		return retVal;
 	}
 
 	@RequestResponse
 	public void setenv( Value request ) throws FaultException {
 		String key = request.getChildren( "key" ).first().strValue();
 		String value = request.getChildren( "value" ).first().strValue();
-		try {
-			RuntimeService.updateEnv( key, value );
-		} catch( ReflectiveOperationException e ) {
-			throw new FaultException( "RuntimeException", e );
-		}
+
+		envMap.put( key, value );
 	}
 
 	@RequestResponse
